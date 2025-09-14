@@ -2,102 +2,133 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Автономный инструмент: Запчасти + Страховая</title>
+<title>Аналитика ДТП Воронеж</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body { font-family: Arial, sans-serif; background: #f0f5f5; padding: 20px; }
-h1 { text-align: center; color: #333; }
+body { font-family: Arial, sans-serif; padding: 20px; background: #f0f5f5; }
+h1 { text-align: center; }
 section { background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);}
-input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+canvas { max-width: 100%; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+th, td { border: 1px solid #ccc; padding: 8px; }
 th { background: #333; color: #fff; }
-tr:nth-child(even) { background: #eee; }
-#insuranceResult { margin-top: 10px; padding: 10px; background: #e0f7fa; border-radius: 5px; }
+tr:nth-child(even){background:#eee;}
 </style>
 </head>
 <body>
 
-<h1>Инструмент: Запчасти + Страховая</h1>
+<h1>Аналитика ДТП Воронеж</h1>
 
 <section>
-  <h2>Справочник запчастей</h2>
-  <input type="text" id="partSearch" placeholder="Введите марку, модель или деталь">
-  <table>
+  <h2>Загрузите локальную базу ДТП (JSON)</h2>
+  <input type="file" id="fileInput" accept=".json">
+</section>
+
+<section>
+  <h2>Топ аварийных улиц</h2>
+  <table id="streetTable">
     <thead>
-      <tr><th>Марка</th><th>Модель</th><th>Деталь</th><th>Цена, руб.</th></tr>
+      <tr><th>Улица</th><th>Количество ДТП</th></tr>
     </thead>
-    <tbody id="partTable"></tbody>
+    <tbody></tbody>
   </table>
 </section>
 
 <section>
-  <h2>Проверка страховой суммы</h2>
-  <select id="insuranceSelect">
-    <option value="">Выберите страховую компанию</option>
-  </select>
-  <div id="insuranceResult"></div>
+  <h2>График ДТП по часам</h2>
+  <canvas id="hoursChart"></canvas>
+</section>
+
+<section>
+  <h2>Сводка по районам</h2>
+  <table id="districtTable">
+    <thead>
+      <tr><th>Район</th><th>Количество ДТП</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 </section>
 
 <script>
-// ===== Данные запчастей =====
-const parts = [
-  {brand:"Toyota", model:"Camry", part:"Фара", price:12000},
-  {brand:"Toyota", model:"Camry", part:"Бампер", price:15000},
-  {brand:"Lada", model:"Granta", part:"Дверь", price:8000},
-  {brand:"Lada", model:"Granta", part:"Фара", price:5000}
-];
+// ===== Настройки Telegram =====
+const BOT_TOKEN = "7540783502:AAGaCzOo4G951ECpFBeUED5_Mhk0qFdlkFI";
+const CHAT_ID = "881133631";
+const peakHours = [8,9,17,18,19]; // часы пик
 
-function renderParts(data) {
-  const tbody = document.getElementById('partTable');
-  tbody.innerHTML = '';
-  data.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${p.brand}</td><td>${p.model}</td><td>${p.part}</td><td>${p.price}</td>`;
-    tbody.appendChild(tr);
-  });
+function sendTelegram(message){
+    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({chat_id: CHAT_ID, text: message})
+    }).catch(err => console.log("Telegram fetch error:", err));
 }
-renderParts(parts);
 
-document.getElementById('partSearch').addEventListener('input', function() {
-  const query = this.value.toLowerCase();
-  const filtered = parts.filter(p => 
-    p.brand.toLowerCase().includes(query) || 
-    p.model.toLowerCase().includes(query) || 
-    p.part.toLowerCase().includes(query)
-  );
-  renderParts(filtered);
-});
+// ===== Аналитика =====
+function updateAnalytics(data){
+    const streetCount = {};
+    const hourCount = {};
+    const districtCount = {};
 
-// ===== Данные страховых компаний =====
-const insuranceData = [
-  {company:"Росгосстрах", type:"ОСАГО", maxSum:500000},
-  {company:"Росгосстрах", type:"КАСКО", maxSum:1000000},
-  {company:"Ингосстрах", type:"ОСАГО", maxSum:400000},
-  {company:"Ингосстрах", type:"КАСКО", maxSum:900000}
-];
+    data.forEach(d => {
+        streetCount[d.street] = (streetCount[d.street] || 0) + 1;
+        districtCount[d.district] = (districtCount[d.district] || 0) + 1;
+        const hour = parseInt(d.time.split(":")[0]);
+        hourCount[hour] = (hourCount[hour] || 0) + 1;
+    });
 
-// Заполняем select
-const select = document.getElementById('insuranceSelect');
-insuranceData.forEach(item => {
-  const option = document.createElement('option');
-  option.value = `${item.company}|${item.type}|${item.maxSum}`;
-  option.textContent = `${item.company} - ${item.type}`;
-  select.appendChild(option);
-});
+    // Топ улиц
+    const streetTable = document.querySelector("#streetTable tbody");
+    streetTable.innerHTML = "";
+    Object.entries(streetCount).sort((a,b)=>b[1]-a[1]).forEach(([street,count]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${street}</td><td>${count}</td>`;
+        streetTable.appendChild(tr);
+    });
 
-select.addEventListener('change', function() {
-  const val = this.value;
-  if(!val) {
-    document.getElementById('insuranceResult').textContent = '';
-    return;
-  }
-  const [company, type, maxSum] = val.split('|');
-  document.getElementById('insuranceResult').innerHTML = `
-    Страховая: <strong>${company}</strong><br>
-    Тип полиса: <strong>${type}</strong><br>
-    Максимальная выплата: <strong>${Number(maxSum).toLocaleString()} руб.</strong>
-  `;
+    // Сводка по районам
+    const districtTable = document.querySelector("#districtTable tbody");
+    districtTable.innerHTML = "";
+    Object.entries(districtCount).sort((a,b)=>b[1]-a[1]).forEach(([district,count]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${district}</td><td>${count}</td>`;
+        districtTable.appendChild(tr);
+    });
+
+    // График по часам
+    const ctx = document.getElementById("hoursChart").getContext("2d");
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(hourCount).sort((a,b)=>a-b),
+            datasets: [{
+                label: 'Количество ДТП',
+                data: Object.keys(hourCount).sort((a,b)=>a-b).map(h=>hourCount[h]),
+                backgroundColor: '#2193b0'
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    // Telegram уведомление по часам пик
+    let message = "📊 Часы пик ДТП Воронеж:\n";
+    Object.entries(hourCount).filter(([h]) => peakHours.includes(parseInt(h)))
+        .sort((a,b)=>b[1]-a[1])
+        .forEach(([h,count]) => {
+            message += `Час ${h}:00 — ${count} ДТП\n`;
+        });
+    sendTelegram(message);
+}
+
+// ===== Загрузка файла =====
+document.getElementById("fileInput").addEventListener("change", function(e){
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function(event){
+        const data = JSON.parse(event.target.result);
+        updateAnalytics(data);
+    }
+    reader.readAsText(file);
 });
 </script>
 
