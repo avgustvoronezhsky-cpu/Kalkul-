@@ -21,11 +21,6 @@ tr:nth-child(even){background:#eee;}
 <h1>Аналитика ДТП Воронеж</h1>
 
 <section>
-  <h2>Загрузите локальную базу ДТП (JSON)</h2>
-  <input type="file" id="fileInput" accept=".json">
-</section>
-
-<section>
   <h2>Топ аварийных улиц</h2>
   <table id="streetTable">
     <thead>
@@ -63,6 +58,19 @@ function sendTelegram(message){
         body: JSON.stringify({chat_id: CHAT_ID, text: message})
     }).catch(err => console.log("Telegram fetch error:", err));
 }
+
+// ===== Симулированные данные по Воронежу =====
+const dpsData = [
+  {date:"2025-09-14", time:"08:30", street:"Московский проспект", district:"Центральный"},
+  {date:"2025-09-14", time:"18:15", street:"Московский проспект", district:"Центральный"},
+  {date:"2025-09-14", time:"09:10", street:"Ленинский проспект", district:"Ленинский"},
+  {date:"2025-09-14", time:"17:45", street:"Ленинский проспект", district:"Ленинский"},
+  {date:"2025-09-14", time:"08:50", street:"Проспект Патриотов", district:"Железнодорожный"},
+  {date:"2025-09-14", time:"18:05", street:"Проспект Патриотов", district:"Железнодорожный"},
+  {date:"2025-09-14", time:"12:30", street:"Московский проспект", district:"Центральный"},
+  {date:"2025-09-14", time:"14:20", street:"Ленинский проспект", district:"Ленинский"},
+  {date:"2025-09-14", time:"19:00", street:"Проспект Патриотов", district:"Железнодорожный"},
+];
 
 // ===== Аналитика =====
 function updateAnalytics(data){
@@ -120,16 +128,8 @@ function updateAnalytics(data){
     sendTelegram(message);
 }
 
-// ===== Загрузка файла =====
-document.getElementById("fileInput").addEventListener("change", function(e){
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = function(event){
-        const data = JSON.parse(event.target.result);
-        updateAnalytics(data);
-    }
-    reader.readAsText(file);
-});
+// ===== Запуск =====
+updateAnalytics(dpsData);
 </script>
 
 </body>
