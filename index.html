@@ -2,98 +2,102 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Калькулятор компенсации</title>
+<title>Автономный инструмент: Запчасти + Страховая</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
-body {
-    font-family: 'Roboto', sans-serif;
-    background: linear-gradient(to right, #6dd5ed, #2193b0);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-    min-height: 100vh;
-    margin: 0;
-    color: #333;
-}
-h1 {
-    color: #fff;
-    text-align: center;
-    margin-bottom: 20px;
-    text-shadow: 1px 1px 5px rgba(0,0,0,0.3);
-}
-form {
-    background: #fff;
-    padding: 25px 30px;
-    border-radius: 15px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    width: 100%;
-    max-width: 400px;
-}
-input, button {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-}
-button {
-    background: #2193b0;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    transition: 0.3s;
-}
-button:hover {
-    background: #6dd5ed;
-}
-#result {
-    background: #fff;
-    padding: 20px 25px;
-    border-radius: 15px;
-    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
-    margin-top: 20px;
-    max-width: 400px;
-    text-align: center;
-    font-size: 18px;
-}
+body { font-family: Arial, sans-serif; background: #f0f5f5; padding: 20px; }
+h1 { text-align: center; color: #333; }
+section { background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);}
+input, select { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+th { background: #333; color: #fff; }
+tr:nth-child(even) { background: #eee; }
+#insuranceResult { margin-top: 10px; padding: 10px; background: #e0f7fa; border-radius: 5px; }
 </style>
 </head>
 <body>
 
-<h1>Калькулятор компенсации</h1>
+<h1>Инструмент: Запчасти + Страховая</h1>
 
-<form id="calcForm">
-  <input type="number" id="damageCost" placeholder="Стоимость повреждений, руб." required>
-  <input type="number" id="insuranceSum" placeholder="Страховая сумма, руб." required>
-  <input type="number" id="wear" placeholder="Процент износа, %" value="0">
-  <button type="submit">Рассчитать компенсацию</button>
-</form>
+<section>
+  <h2>Справочник запчастей</h2>
+  <input type="text" id="partSearch" placeholder="Введите марку, модель или деталь">
+  <table>
+    <thead>
+      <tr><th>Марка</th><th>Модель</th><th>Деталь</th><th>Цена, руб.</th></tr>
+    </thead>
+    <tbody id="partTable"></tbody>
+  </table>
+</section>
 
-<div id="result"></div>
+<section>
+  <h2>Проверка страховой суммы</h2>
+  <select id="insuranceSelect">
+    <option value="">Выберите страховую компанию</option>
+  </select>
+  <div id="insuranceResult"></div>
+</section>
 
 <script>
-document.getElementById('calcForm').addEventListener('submit', function(e){
-    e.preventDefault();
+// ===== Данные запчастей =====
+const parts = [
+  {brand:"Toyota", model:"Camry", part:"Фара", price:12000},
+  {brand:"Toyota", model:"Camry", part:"Бампер", price:15000},
+  {brand:"Lada", model:"Granta", part:"Дверь", price:8000},
+  {brand:"Lada", model:"Granta", part:"Фара", price:5000}
+];
 
-    const damageCost = parseFloat(document.getElementById('damageCost').value);
-    const insuranceSum = parseFloat(document.getElementById('insuranceSum').value);
-    const wear = parseFloat(document.getElementById('wear').value) / 100;
+function renderParts(data) {
+  const tbody = document.getElementById('partTable');
+  tbody.innerHTML = '';
+  data.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.brand}</td><td>${p.model}</td><td>${p.part}</td><td>${p.price}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+renderParts(parts);
 
-    let compensation = damageCost * (1 - wear);
+document.getElementById('partSearch').addEventListener('input', function() {
+  const query = this.value.toLowerCase();
+  const filtered = parts.filter(p => 
+    p.brand.toLowerCase().includes(query) || 
+    p.model.toLowerCase().includes(query) || 
+    p.part.toLowerCase().includes(query)
+  );
+  renderParts(filtered);
+});
 
-    if(compensation > insuranceSum) compensation = insuranceSum;
+// ===== Данные страховых компаний =====
+const insuranceData = [
+  {company:"Росгосстрах", type:"ОСАГО", maxSum:500000},
+  {company:"Росгосстрах", type:"КАСКО", maxSum:1000000},
+  {company:"Ингосстрах", type:"ОСАГО", maxSum:400000},
+  {company:"Ингосстрах", type:"КАСКО", maxSum:900000}
+];
 
-    document.getElementById('result').innerHTML = `
-        <strong>💰 Компенсация клиенту:</strong> ${compensation.toFixed(2)} руб.<br><br>
-        <strong>Детали расчета:</strong><br>
-        Стоимость повреждений: ${damageCost} руб.<br>
-        Износ: ${(wear*100).toFixed(0)}%<br>
-        Максимальная страховая сумма: ${insuranceSum} руб.
-    `;
+// Заполняем select
+const select = document.getElementById('insuranceSelect');
+insuranceData.forEach(item => {
+  const option = document.createElement('option');
+  option.value = `${item.company}|${item.type}|${item.maxSum}`;
+  option.textContent = `${item.company} - ${item.type}`;
+  select.appendChild(option);
+});
+
+select.addEventListener('change', function() {
+  const val = this.value;
+  if(!val) {
+    document.getElementById('insuranceResult').textContent = '';
+    return;
+  }
+  const [company, type, maxSum] = val.split('|');
+  document.getElementById('insuranceResult').innerHTML = `
+    Страховая: <strong>${company}</strong><br>
+    Тип полиса: <strong>${type}</strong><br>
+    Максимальная выплата: <strong>${Number(maxSum).toLocaleString()} руб.</strong>
+  `;
 });
 </script>
 
