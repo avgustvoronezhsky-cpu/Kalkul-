@@ -2,37 +2,29 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Аналитика ДТП Воронеж</title>
+<title>ДТП Воронеж — Локальная аналитика</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <style>
-body { font-family: Arial, sans-serif; padding: 20px; background: #f0f5f5; }
-h1 { text-align: center; }
-section { background: #fff; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);}
-canvas { max-width: 100%; }
+body { font-family: Arial, sans-serif; padding: 10px; background: #f0f5f5; }
+h1, h2 { text-align: center; }
+section { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);}
+#map { height: 400px; width: 100%; margin-bottom: 10px; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ccc; padding: 8px; }
 th { background: #333; color: #fff; }
 tr:nth-child(even){background:#eee;}
+input, button { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box;}
 </style>
 </head>
 <body>
 
-<h1>Аналитика ДТП Воронеж</h1>
+<h1>ДТП Воронеж — Локальная аналитика</h1>
 
 <section>
-  <h2>Топ аварийных улиц</h2>
-  <table id="streetTable">
-    <thead>
-      <tr><th>Улица</th><th>Количество ДТП</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</section>
-
-<section>
-  <h2>График ДТП по часам</h2>
-  <canvas id="hoursChart"></canvas>
+  <h2>Карта ДТП</h2>
+  <div id="map"></div>
 </section>
 
 <section>
@@ -45,91 +37,80 @@ tr:nth-child(even){background:#eee;}
   </table>
 </section>
 
+<section>
+  <h2>Проверка страховой суммы</h2>
+  <input type="text" id="policy" placeholder="Номер полиса">
+  <input type="number" id="damage" placeholder="Сумма ущерба">
+  <button id="checkInsurance">Проверить выплату</button>
+  <p id="insuranceResult"></p>
+</section>
+
+<section>
+  <h2>Средняя сумма выплат</h2>
+  <p id="avgPayment"></p>
+</section>
+
 <script>
 // ===== Настройки Telegram =====
 const BOT_TOKEN = "7540783502:AAGaCzOo4G951ECpFBeUED5_Mhk0qFdlkFI";
 const CHAT_ID = "881133631";
-const peakHours = [8,9,17,18,19]; // часы пик
 
 function sendTelegram(message){
     fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({chat_id: CHAT_ID, text: message})
-    }).catch(err => console.log("Telegram fetch error:", err));
+    }).catch(err => console.log("Telegram error:", err));
 }
 
-// ===== Симулированные данные по Воронежу =====
+// ===== Симулированные данные ДТП =====
 const dpsData = [
-  {date:"2025-09-14", time:"08:30", street:"Московский проспект", district:"Центральный"},
-  {date:"2025-09-14", time:"18:15", street:"Московский проспект", district:"Центральный"},
-  {date:"2025-09-14", time:"09:10", street:"Ленинский проспект", district:"Ленинский"},
-  {date:"2025-09-14", time:"17:45", street:"Ленинский проспект", district:"Ленинский"},
-  {date:"2025-09-14", time:"08:50", street:"Проспект Патриотов", district:"Железнодорожный"},
-  {date:"2025-09-14", time:"18:05", street:"Проспект Патриотов", district:"Железнодорожный"},
-  {date:"2025-09-14", time:"12:30", street:"Московский проспект", district:"Центральный"},
-  {date:"2025-09-14", time:"14:20", street:"Ленинский проспект", district:"Ленинский"},
-  {date:"2025-09-14", time:"19:00", street:"Проспект Патриотов", district:"Железнодорожный"},
+  {name:"Иванов И.И.", time:"08:30", street:"Московский проспект", district:"Центральный", lat:51.660, lon:39.200, damage:120000},
+  {name:"Петров П.П.", time:"18:15", street:"Ленинский проспект", district:"Ленинский", lat:51.660, lon:39.210, damage:80000},
+  {name:"Сидоров С.С.", time:"09:10", street:"Проспект Патриотов", district:"Железнодорожный", lat:51.650, lon:39.220, damage:95000},
+  {name:"Кузнецов К.К.", time:"17:45", street:"Московский проспект", district:"Центральный", lat:51.662, lon:39.205, damage:110000}
 ];
 
-// ===== Аналитика =====
-function updateAnalytics(data){
-    const streetCount = {};
-    const hourCount = {};
-    const districtCount = {};
+// ===== Карта =====
+const map = L.map('map').setView([51.660, 39.200], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
 
-    data.forEach(d => {
-        streetCount[d.street] = (streetCount[d.street] || 0) + 1;
-        districtCount[d.district] = (districtCount[d.district] || 0) + 1;
-        const hour = parseInt(d.time.split(":")[0]);
-        hourCount[hour] = (hourCount[hour] || 0) + 1;
-    });
+// Маркеры и подсказки
+dpsData.forEach(dtp => {
+  const marker = L.marker([dtp.lat, dtp.lon]).addTo(map);
+  marker.bindPopup(`<b>${dtp.name}</b><br>${dtp.street}<br>Район: ${dtp.district}<br>Сумма ущерба: ${dtp.damage} руб.<br>Время: ${dtp.time}`);
+});
 
-    // Топ улиц
-    const streetTable = document.querySelector("#streetTable tbody");
-    streetTable.innerHTML = "";
-    Object.entries(streetCount).sort((a,b)=>b[1]-a[1]).forEach(([street,count]) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${street}</td><td>${count}</td>`;
-        streetTable.appendChild(tr);
-    });
+// ===== Сводка по районам =====
+const districtCount = {};
+dpsData.forEach(d => districtCount[d.district] = (districtCount[d.district]||0)+1);
+const districtTable = document.querySelector("#districtTable tbody");
+Object.entries(districtCount).sort((a,b)=>b[1]-a[1]).forEach(([district,count])=>{
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${district}</td><td>${count}</td>`;
+  districtTable.appendChild(tr);
+});
 
-    // Сводка по районам
-    const districtTable = document.querySelector("#districtTable tbody");
-    districtTable.innerHTML = "";
-    Object.entries(districtCount).sort((a,b)=>b[1]-a[1]).forEach(([district,count]) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${district}</td><td>${count}</td>`;
-        districtTable.appendChild(tr);
-    });
+// ===== Проверка страховой суммы =====
+document.getElementById("checkInsurance").addEventListener("click", ()=>{
+  const policy = document.getElementById("policy").value.trim();
+  const damage = parseFloat(document.getElementById("damage").value);
+  if(!policy || isNaN(damage)){ alert("Введите корректные данные"); return; }
+  // Симуляция проверки — 80% покрытие
+  const payout = Math.round(damage*0.8);
+  document.getElementById("insuranceResult").innerText = `Максимальная выплата по полису ${policy}: ${payout} руб.`;
+});
 
-    // График по часам
-    const ctx = document.getElementById("hoursChart").getContext("2d");
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: Object.keys(hourCount).sort((a,b)=>a-b),
-            datasets: [{
-                label: 'Количество ДТП',
-                data: Object.keys(hourCount).sort((a,b)=>a-b).map(h=>hourCount[h]),
-                backgroundColor: '#2193b0'
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-    });
+// ===== Средняя сумма выплат =====
+const avg = Math.round(dpsData.reduce((a,b)=>a+b.damage,0)/dpsData.length);
+document.getElementById("avgPayment").innerText = `Средняя сумма выплаты по базе: ${avg} руб.`;
 
-    // Telegram уведомление по часам пик
-    let message = "📊 Часы пик ДТП Воронеж:\n";
-    Object.entries(hourCount).filter(([h]) => peakHours.includes(parseInt(h)))
-        .sort((a,b)=>b[1]-a[1])
-        .forEach(([h,count]) => {
-            message += `Час ${h}:00 — ${count} ДТП\n`;
-        });
-    sendTelegram(message);
-}
-
-// ===== Запуск =====
-updateAnalytics(dpsData);
+// ===== Telegram уведомление =====
+let message = "📢 Новые ДТП Воронеж:\n";
+dpsData.forEach(d=>message+=`${d.time} — ${d.name}, ${d.street}, ${d.district}, ущерб: ${d.damage} руб.\n`);
+sendTelegram(message);
 </script>
 
 </body>
