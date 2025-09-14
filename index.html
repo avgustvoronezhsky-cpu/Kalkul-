@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Калькулятор компенсации</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+h1 { text-align: center; color: #333; }
+form { background: #fff; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; }
+input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+#result { background: #fff; padding: 20px; border-radius: 10px; max-width: 400px; margin: 20px auto; font-size: 18px; }
+</style>
+</head>
+<body>
+
+<h1>Калькулятор компенсации</h1>
+
+<form id="calcForm">
+  <input type="number" id="damageCost" placeholder="Стоимость повреждений, руб." required>
+  <input type="number" id="insuranceSum" placeholder="Страховая сумма, руб." required>
+  <input type="number" id="franchise" placeholder="Франшиза, руб." value="0">
+  <input type="number" id="wear" placeholder="Процент износа, %" value="0">
+  <button type="submit">Рассчитать компенсацию</button>
+</form>
+
+<div id="result"></div>
+
+<script>
+document.getElementById('calcForm').addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const damageCost = parseFloat(document.getElementById('damageCost').value);
+    const insuranceSum = parseFloat(document.getElementById('insuranceSum').value);
+    const franchise = parseFloat(document.getElementById('franchise').value);
+    const wear = parseFloat(document.getElementById('wear').value) / 100;
+
+    let compensation = (damageCost - franchise) * (1 - wear);
+
+    // Ограничение по страховой сумме
+    if(compensation > insuranceSum) compensation = insuranceSum;
+
+    document.getElementById('result').innerHTML = `
+        <strong>Компенсация клиенту:</strong> ${compensation.toFixed(2)} руб.<br>
+        <em>Детали расчета:</em><br>
+        Стоимость повреждений: ${damageCost} руб.<br>
+        Франшиза: ${franchise} руб.<br>
+        Износ: ${(wear*100).toFixed(0)}%<br>
+        Максимальная страховая сумма: ${insuranceSum} руб.
+    `;
+});
+</script>
+
+</body>
+</html>
