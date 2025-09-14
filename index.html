@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Улицы и переулки — район 2–3 км от 9 Января 223</title>
+<title>Помощник ГИБДД — 9 Января 223</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -15,11 +15,12 @@ table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ccc; padding: 8px; }
 th { background: #333; color: #fff; }
 tr:nth-child(even){background:#eee;}
+button {padding:5px 10px; margin-top:5px; cursor:pointer;}
 </style>
 </head>
 <body>
 
-<h1>Улицы и переулки — 2–3 км от 9 Января 223</h1>
+<h1>Помощник ГИБДД — 9 Января 223</h1>
 
 <section>
   <h2>Карта района</h2>
@@ -27,47 +28,85 @@ tr:nth-child(even){background:#eee;}
 </section>
 
 <section>
-  <h2>Список улиц и переулков</h2>
-  <table id="streetTable">
+  <h2>Список ДТП</h2>
+  <table id="dptTable">
     <thead>
-      <tr><th>Улица / Переулок</th></tr>
+      <tr><th>Улица / Переулок</th><th>Описание</th><th>Действия</th></tr>
     </thead>
     <tbody></tbody>
   </table>
+  <h3>Добавить новое ДТП</h3>
+  <input type="text" id="street" placeholder="Улица / Переулок">
+  <input type="text" id="desc" placeholder="Описание">
+  <button onclick="addDTP()">Добавить ДТП</button>
 </section>
 
 <script>
-// ===== Локальные данные улиц и переулков рядом с 9 Января 223 =====
-const streets = [
-"9 Января", "Свободы", "Революции 1905 года", "Фридриха Энгельса",
-"Никитинская", "Донбасская", "Карла Маркса", "Мира", "Ленина",
-"Кольцовская", "Плехановская", "Бакунина", "Комиссаржевская",
-"Куколкина", "Куцыгина", "Красноармейская", "Ворошилова", "Лесная",
-"Трамвайная", "Острогожская", "Репина", "Беговая", "25 Января",
-"Садовая", "50 лет Октября", "Брянская", "Коммунаров"
-];
+// ===== Telegram =====
+const BOT_TOKEN = "7540783502:AAGaCzOo4G951ECpFBeUED5_Mhk0qFdlkFI";
+const CHAT_ID = "881133631";
+function sendTelegram(message){
+    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({chat_id:CHAT_ID,text:message})
+    }).catch(err=>console.log("Telegram error:",err));
+}
 
-// ===== Таблица =====
-const tbody = document.querySelector("#streetTable tbody");
-streets.forEach(s=>{
-  const tr = document.createElement("tr");
-  tr.innerHTML = `<td>${s}</td>`;
-  tbody.appendChild(tr);
-});
+// ===== Локальная база ДТП =====
+let dptList = JSON.parse(localStorage.getItem("dptList")||"[]");
 
 // ===== Карта =====
-const map = L.map('map').setView([51.6605, 39.2030], 15);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
+const map = L.map('map').setView([51.6605,39.2030],15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-// Добавляем маркеры улиц (символические)
-streets.forEach((s,i)=>{
-  const lat = 51.6605 + (Math.random()-0.5)*0.02; // ±1 км
-  const lon = 39.2030 + (Math.random()-0.5)*0.02;
-  const marker = L.circleMarker([lat, lon], {radius:6, color:'orange'}).addTo(map);
-  marker.bindPopup(s);
-});
+function addMarker(dtp){
+  const marker = L.circleMarker([51.6605 + (Math.random()-0.5)*0.03, 39.2030 + (Math.random()-0.5)*0.03],{
+    radius:8,
+    color:'red'
+  }).addTo(map);
+  marker.bindPopup(`<b>${dtp.street}</b><br>${dtp.desc}`);
+}
+
+// ===== Таблица =====
+function renderTable(){
+  const tbody = document.querySelector("#dptTable tbody");
+  tbody.innerHTML = "";
+  dptList.forEach((dtp,index)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${dtp.street}</td><td>${dtp.desc}</td><td><button onclick="removeDTP(${index})">Удалить</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== Добавление нового ДТП =====
+function addDTP(){
+  const street = document.getElementById("street").value.trim();
+  const desc = document.getElementById("desc").value.trim();
+  if(!street||!desc)return alert("Заполните все поля");
+  const dtp = {street,desc};
+  dptList.push(dtp);
+  localStorage.setItem("dptList",JSON.stringify(dptList));
+  addMarker(dtp);
+  renderTable();
+  sendTelegram(`🚨 Новое ДТП: ${street} — ${desc}`);
+  document.getElementById("street").value="";
+  document.getElementById("desc").value="";
+}
+
+// ===== Удаление ДТП =====
+function removeDTP(index){
+  dptList.splice(index,1);
+  localStorage.setItem("dptList",JSON.stringify(dptList));
+  renderTable();
+  location.reload(); // обновляем карту
+}
+
+// ===== Инициализация =====
+dptList.forEach(dtp=>addMarker(dtp));
+renderTable();
 </script>
 
 </body>
