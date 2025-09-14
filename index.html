@@ -2,16 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>ДТП Воронеж — 9 Января 223</title>
+<title>Улицы и переулки — район 2–3 км от 9 Января 223</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body { font-family: Arial, sans-serif; padding: 10px; background: #f0f5f5; }
 h1, h2 { text-align: center; }
 section { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);}
-#map { height: 450px; width: 100%; margin-bottom: 10px; }
+#map { height: 500px; width: 100%; margin-bottom: 10px; }
 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 th, td { border: 1px solid #ccc; padding: 8px; }
 th { background: #333; color: #fff; }
@@ -20,119 +19,55 @@ tr:nth-child(even){background:#eee;}
 </head>
 <body>
 
-<h1>ДТП Воронеж — 9 Января 223 и окрестности</h1>
+<h1>Улицы и переулки — 2–3 км от 9 Января 223</h1>
 
 <section>
-  <h2>Карта ДТП</h2>
+  <h2>Карта района</h2>
   <div id="map"></div>
 </section>
 
 <section>
-  <h2>Таблица улиц и переулков</h2>
+  <h2>Список улиц и переулков</h2>
   <table id="streetTable">
     <thead>
-      <tr><th>Улица / Переулок</th><th>Количество ДТП</th><th>Время доезда (мин)</th></tr>
+      <tr><th>Улица / Переулок</th></tr>
     </thead>
     <tbody></tbody>
   </table>
 </section>
 
-<section>
-  <h2>График ДТП по часам</h2>
-  <canvas id="hoursChart"></canvas>
-</section>
-
 <script>
-// ===== Telegram =====
-const BOT_TOKEN = "7540783502:AAGaCzOo4G951ECpFBeUED5_Mhk0qFdlkFI";
-const CHAT_ID = "881133631";
-function sendTelegram(message){
-    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({chat_id: CHAT_ID, text: message})
-    }).catch(err => console.log("Telegram error:", err));
-}
-
-// ===== Симулированные данные ДТП =====
-// Все улицы в радиусе 5–7 минут от 9 Января 223
-const dpsData = [
-  {street:"9 Января", time:"08:30", lat:51.6605, lon:39.2030, damage:120000},
-  {street:"Свободы", time:"09:10", lat:51.6610, lon:39.2050, damage:95000},
-  {street:"Революции 1905 года", time:"08:45", lat:51.6590, lon:39.2000, damage:110000},
-  {street:"Фридриха Энгельса", time:"17:20", lat:51.6615, lon:39.2070, damage:70000},
-  {street:"Никитинская", time:"18:10", lat:51.6595, lon:39.2080, damage:85000},
-  {street:"Донбасская", time:"12:30", lat:51.6620, lon:39.2040, damage:90000},
-  {street:"Карла Маркса", time:"14:20", lat:51.6600, lon:39.2060, damage:60000},
-  {street:"Мира", time:"08:50", lat:51.6610, lon:39.2090, damage:75000},
-  {street:"Ленина", time:"16:10", lat:51.6620, lon:39.2010, damage:95000},
-  {street:"Кольцовская", time:"17:50", lat:51.6605, lon:39.2025, damage:70000},
-  {street:"Плехановская", time:"09:40", lat:51.6615, lon:39.2035, damage:88000},
-  {street:"Бакунина", time:"11:15", lat:51.6595, lon:39.2045, damage:99000},
-  {street:"Комиссаржевская", time:"13:30", lat:51.6625, lon:39.2055, damage:77000},
-  {street:"Куколкина", time:"10:50", lat:51.6600, lon:39.2075, damage:67000},
-  {street:"Куцыгина", time:"15:05", lat:51.6610, lon:39.2085, damage:85000},
-  {street:"Красноармейская", time:"14:40", lat:51.6620, lon:39.2095, damage:80000},
-  {street:"Ворошилова", time:"12:10", lat:51.6605, lon:39.2065, damage:72000},
-  {street:"Лесная", time:"18:30", lat:51.6615, lon:39.2070, damage:90000},
-  {street:"Трамвайная", time:"09:20", lat:51.6590, lon:39.2050, damage:85000},
-  {street:"Острогожская", time:"08:55", lat:51.6600, lon:39.2040, damage:94000},
-  {street:"Репина", time:"13:15", lat:51.6610, lon:39.2050, damage:66000},
-  {street:"Беговая", time:"14:30", lat:51.6620, lon:39.2060, damage:71000},
-  {street:"25 Января", time:"16:45", lat:51.6605, lon:39.2035, damage:83000},
-  {street:"Садовая", time:"17:30", lat:51.6615, lon:39.2045, damage:88000},
-  {street:"Фридриха Энгельса 2", time:"08:10", lat:51.6595, lon:39.2075, damage:76000},
-  {street:"50 лет Октября", time:"09:50", lat:51.6600, lon:39.2080, damage:91000},
-  {street:"Брянская", time:"11:20", lat:51.6610, lon:39.2090, damage:95000},
-  {street:"Коммунаров", time:"15:40", lat:51.6620, lon:39.2025, damage:70000},
-  {street:"Плехановская 2", time:"16:10", lat:51.6605, lon:39.2030, damage:88000},
-  {street:"Никитинская 2", time:"12:55", lat:51.6615, lon:39.2040, damage:81000}
+// ===== Локальные данные улиц и переулков рядом с 9 Января 223 =====
+const streets = [
+"9 Января", "Свободы", "Революции 1905 года", "Фридриха Энгельса",
+"Никитинская", "Донбасская", "Карла Маркса", "Мира", "Ленина",
+"Кольцовская", "Плехановская", "Бакунина", "Комиссаржевская",
+"Куколкина", "Куцыгина", "Красноармейская", "Ворошилова", "Лесная",
+"Трамвайная", "Острогожская", "Репина", "Беговая", "25 Января",
+"Садовая", "50 лет Октября", "Брянская", "Коммунаров"
 ];
 
+// ===== Таблица =====
+const tbody = document.querySelector("#streetTable tbody");
+streets.forEach(s=>{
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${s}</td>`;
+  tbody.appendChild(tr);
+});
+
 // ===== Карта =====
-const map = L.map('map').setView([51.6605, 39.2030], 16);
+const map = L.map('map').setView([51.6605, 39.2030], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-// Добавление маркеров
-dpsData.forEach(dtp => {
-  const color = dtp.street.startsWith("9 Января") ? 'red' : 'orange';
-  const marker = L.circleMarker([dtp.lat, dtp.lon], {radius:8, color: color}).addTo(map);
-  marker.bindPopup(`<b>${dtp.street}</b><br>Время: ${dtp.time}<br>Ущерб: ${dtp.damage} руб.`);
+// Добавляем маркеры улиц (символические)
+streets.forEach((s,i)=>{
+  const lat = 51.6605 + (Math.random()-0.5)*0.02; // ±1 км
+  const lon = 39.2030 + (Math.random()-0.5)*0.02;
+  const marker = L.circleMarker([lat, lon], {radius:6, color:'orange'}).addTo(map);
+  marker.bindPopup(s);
 });
-
-// ===== Таблица улиц =====
-const streetCount = {};
-dpsData.forEach(d => streetCount[d.street] = (streetCount[d.street]||0)+1);
-const streetTable = document.querySelector("#streetTable tbody");
-Object.entries(streetCount).sort((a,b)=>b[1]-a[1]).forEach(([street,count])=>{
-  const tr = document.createElement("tr");
-  const time = 5 + Math.floor(Math.random()*3); // 5–7 минут
-  tr.innerHTML = `<td>${street}</td><td>${count}</td><td>${time}</td>`;
-  streetTable.appendChild(tr);
-});
-
-// ===== График по часам =====
-const hourCount = {};
-dpsData.forEach(d=>{
-  const hour = parseInt(d.time.split(":")[0]);
-  hourCount[hour] = (hourCount[hour]||0)+1;
-});
-const ctx = document.getElementById("hoursChart").getContext("2d");
-new Chart(ctx, {
-  type:'bar',
-  data:{
-    labels:Object.keys(hourCount).sort((a,b)=>a-b),
-    datasets:[{label:'Количество ДТП', data:Object.keys(hourCount).sort((a,b)=>a-b).map(h=>hourCount[h]), backgroundColor:'#2193b0'}]
-  },
-  options:{responsive:true, plugins:{legend:{display:false}}}
-});
-
-// ===== Telegram уведомление =====
-let message = "📢 ДТП рядом с 9 Января 223:\n";
-dpsData.forEach(d=>message+=`${d.time} — ${d.street}, ущерб: ${d.damage} руб.\n`);
-sendTelegram(message);
 </script>
 
 </body>
