@@ -1,263 +1,78 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Я помогаю при ДТП — запись и связь</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Отправка сообщения о ДТП 🚗</title>
 <style>
 :root{
   --bg: linear-gradient(180deg,#f7f7fb 0%,#eef2fb 100%);
-  --card: rgba(255,255,255,0.92);
-  --muted:#6b7280;
-  --accent:#0a84ff;
-  --accent-dark:#0066d6;
-  --radius:16px;
+  --card: rgba(255,255,255,0.85);
+  --accent: #0a84ff;
+  --accent-dark: #0066d6;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;
 }
 html,body{height:100%;margin:0;}
-body{
-  display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);
-  -webkit-font-smoothing:antialiased;
-}
-.container{
-  width:100%;max-width:720px;background:var(--card);border-radius:18px;padding:20px;box-shadow:0 10px 30px rgba(20,20,50,0.08);
-}
-.header{display:flex;gap:12px;align-items:center;margin-bottom:14px}
-.logo{width:72px;height:72px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 8px 20px rgba(10,20,50,0.06)}
-h1{margin:0;font-size:20px}
-.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-.full{grid-column:1 / -1}
-label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-input,textarea,select{width:100%;padding:12px;border-radius:12px;border:none;background:#fbfdff;box-shadow:0 6px 18px rgba(10,20,50,0.04);font-size:15px;outline:none}
-textarea{min-height:120px;resize:vertical}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-.btn{padding:12px 16px;border-radius:12px;border:none;cursor:pointer;font-size:15px}
-.primary{background:linear-gradient(180deg,var(--accent),var(--accent-dark));color:#fff;box-shadow:0 10px 30px rgba(10,132,255,0.12)}
-.ghost{background:#fff;border:1px solid rgba(10,10,20,0.06)}
-.status{margin-top:12px;padding:10px;border-radius:10px;display:none}
-.status.show{display:block}
-.ok{background:rgba(16,185,129,0.06);color:#064e3b;border:1px solid rgba(16,185,129,0.12)}
-.err{background:rgba(239,68,68,0.06);color:#7f1d1d;border:1px solid rgba(239,68,68,0.08)}
-.preview{margin-top:12px;padding:12px;border-radius:12px;background:#fff;border:1px solid rgba(0,0,0,0.04)}
-.small{font-size:13px;color:var(--muted)}
-@media (max-width:640px){ .form{grid-template-columns:1fr} .logo{width:56px;height:56px;font-size:28px} }
+body{display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);}
+.frame{width:100%;max-width:420px;border-radius:22px;backdrop-filter:blur(12px);background:var(--card);padding:20px;box-shadow:0 10px 30px rgba(20,20,50,0.12);}
+h1{font-size:20px;margin:0 0 20px;text-align:center;}
+.group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+label{font-size:14px;color:#555;}
+input{border:none;outline:none;background:#fff;border-radius:16px;padding:14px;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,0.05);}
+button{background:linear-gradient(180deg,var(--accent),var(--accent-dark));color:white;border:none;padding:16px;font-size:17px;border-radius:18px;cursor:pointer;display:block;width:100%;}
+.status{margin-top:14px;padding:10px;border-radius:12px;font-size:14px;display:none;}
+.status.show{display:block;}
+.ok{background:rgba(16,185,129,0.1);color:#065f46;}
+.err{background:rgba(239,68,68,0.1);color:#7f1d1d;}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="header">
-    <div class="logo">🚗</div>
-    <div>
-      <h1>Я помогаю при ДТП — мгновенная отправка</h1>
-      <div class="small">Отправь клиенту WhatsApp и получи уведомление в Telegram</div>
+<div class="frame">
+  <h1>📲 Отправка сообщения</h1>
+  <form id="promoForm">
+    <div class="group">
+      <label>Введите номер клиента</label>
+      <input id="phone" type="tel" placeholder="+7 XXX XXX XX XX" required>
     </div>
-  </div>
-
-  <form id="promoForm" class="form" autocomplete="off">
-    <!-- ПОЛЯ -->
-    <div class="full">
-      <label>Твое имя (как будет в тексте)</label>
-      <input id="myName" type="text" value="Белашков Данила" required>
-    </div>
-
-    <div>
-      <label>Город / область</label>
-      <input id="city" type="text" value="Воронеж" required>
-    </div>
-
-    <div>
-      <label>Твой публичный номер (для клиента)</label>
-      <input id="myPhone" type="tel" value="+7 908 134-37-22" required>
-    </div>
-
-    <div class="full">
-      <label>Короткое описание / плюсы (каждый пункт с новой строки)</label>
-      <textarea id="benefits">Помогу максимально правильно оформить ДТП и подготовить документы для страховой
-Увеличиваю вероятность корректной выплаты в 2–3 раза*
-Опыта работы с разными страховыми компаниями, выезд на место, консультация</textarea>
-    </div>
-
-    <div>
-      <label>CTA — текст для клиента (можно редактировать)</label>
-      <textarea id="clientText">Здравствуйте! Я {name}, аварийный комиссар в {city}. Помогаю при ДТП — выезд, оформление и подготовка документов. Мой номер: {phone}. Напишите, пожалуйста, где вы находитесь и кратко ситуацию.</textarea>
-    </div>
-
-    <div>
-      <label>Telegram бот токен (ВАЖНО — если не хочешь публиковать токен, оставь пустым и отправку в Telegram делать не будем)</label>
-      <input id="tgToken" type="text" placeholder="123456:ABC-DEF...">
-    </div>
-
-    <div>
-      <label>Telegram chat_id (куда приходят уведомления)</label>
-      <input id="tgChat" type="text" value="881133631" required>
-    </div>
-
-    <div class="full">
-      <label>Предпросмотр промо-текста (будет отправлен клиенту и в Telegram)</label>
-      <div id="preview" class="preview"></div>
-    </div>
-
-    <div class="actions full">
-      <button type="button" id="sendAll" class="btn primary">🚀 Отправить клиенту (WhatsApp) и уведомление в Telegram</button>
-      <button type="button" id="copyTxt" class="btn ghost">📋 Скопировать текст</button>
-      <button type="button" id="openTG" class="btn ghost">✉️ Отправить только в Telegram</button>
-    </div>
-
+    <button type="submit">Отправить описание в WhatsApp</button>
     <div id="status" class="status"></div>
   </form>
-
-  <p class="small" style="margin-top:10px">*Формулировки вроде «увеличиваю выплату в 2–3 раза» используй аккуратно и только если можешь подтвердить.</p>
 </div>
 
 <script>
-/*
-  Как пользоваться:
-  1) Вставь этот файл в GitHub как index.html или хостни локально.
-  2) При желании вставь свой TELEGRAM BOT TOKEN в поле (или оставь пустым).
-  3) Нажми кнопку "Отправить" — клиенту откроется WhatsApp с готовым текстом,
-     а тебе придет уведомление в Telegram (если токен задали).
-  4) По безопасности: токен виден в клиентском коде — если хочешь избегать этого,
-     скажи, я подскажу, как отправлять уведомления через простую серверную функцию.
-*/
+const form=document.getElementById('promoForm');
+const phoneInput=document.getElementById('phone');
+const statusEl=document.getElementById('status');
 
-const el = id => document.getElementById(id);
-const myName = el('myName');
-const city = el('city');
-const myPhone = el('myPhone');
-const benefits = el('benefits');
-const clientText = el('clientText');
-const preview = el('preview');
-const tgToken = el('tgToken');
-const tgChat = el('tgChat');
-const status = el('status');
+const MY_PHONE="+7 (908) 134-37-22"; // твой номер
+const MY_NAME="Белашков Данила";     // твоё имя
+const CITY="Воронеж";
 
-function buildClientMessage(){
-  const txt = clientText.value
-    .replace(/\{name\}/g, myName.value.trim())
-    .replace(/\{city\}/g, city.value.trim())
-    .replace(/\{phone\}/g, myPhone.value.trim());
-  return txt;
-}
+// Текст сообщения для клиента
+const PROMO_MESSAGE = `Здравствуйте! 👋
+Меня зовут ${MY_NAME}, я аварийный комиссар в г. ${CITY}.
 
-function buildPromoFull(){
-  const header = `🚨 Помощь при ДТП | ${city.value.trim()}\n\nМеня зовут ${myName.value.trim()}.`;
-  const benefitsLines = benefits.value.trim().split(/\n+/).map(s=> '• ' + s.trim()).join('\n');
-  const contact = `\n\n📱 Телефон: ${myPhone.value.trim()}\n\n*Результат зависит от конкретного случая и страховой компании.`;
-  return `${header}\n\n${benefitsLines}\n${contact}`;
-}
+🚗 Помогаю при оформлении ДТП  
+💰 Увеличиваю страховую выплату в 2-3 раза  
+🔧 Организую ремонт авто  
+🚛 Эвакуатор в любой район  
 
-function updatePreview(){
-  preview.textContent = buildPromoFull() + '\n\n' + buildClientMessage();
-}
-updatePreview();
+📞 Телефон для связи: ${MY_PHONE}
+`;
 
-// слушаем изменения
-[myName,city,myPhone,benefits,clientText].forEach(node => node.addEventListener('input', updatePreview));
-
-// кнопки
-el('copyTxt').addEventListener('click', ()=>{
-  const text = buildPromoFull() + '\n\n' + buildClientMessage();
-  navigator.clipboard.writeText(text).then(()=>{
-    status.textContent = '✅ Текст скопирован в буфер обмена';
-    status.className='status show ok';
-    setTimeout(()=>status.className='status',4000);
-  }).catch(()=>{
-    status.textContent = '⚠️ Не удалось скопировать';
-    status.className='status show err';
-  });
-});
-
-el('sendAll').addEventListener('click', async ()=>{
-  status.className='status';
-  const clientMsg = buildClientMessage();
-  const promoFull = buildPromoFull();
-
-  // Открыть WhatsApp для клиента
-  // пытаемся получить номер клиента из поля myPhone (если хочешь вводить номер клиента — можно добавить поле)
-  const phoneDigits = myPhone.value.replace(/\D/g,'').replace(/^8/,'7'); // если ввёл 8..., заменим на 7..
-  if(!/^\+?7\d{10}$/.test('+'+phoneDigits.replace(/^+?/,'')) && phoneDigits.length < 11){
-    // Здесь предполагается, что отправляем на свой номер клиента через WhatsApp:
-    // Для удобства откроем просто wa.me с твоим номером (чтобы клиент мог писать тебе) — но обычно client должен быть тот, кто пишет.
-  }
-
-  // Открываем WhatsApp: если хочешь отправлять клиенту (например, их номер вводится отдельно)
-  // По умолчанию — откроем чат с твоим номером (чтобы клиент мог сразу написать тебе) и вставим промо
-  const waNumber = myPhone.value.replace(/\D/g,''); // без плюса
-  const waText = promoFull + '\n\n' + clientMsg;
-  const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
-  window.open(waUrl, '_blank');
-
-  // Отправляем уведомление в Telegram (в твой чат) — если токен задан
-  const token = tgToken.value.trim();
-  const chat = tgChat.value.trim() || '881133631';
-  if(token){
-    const tgText = `📣 *Новый промо-рассылка* \n\n${promoFull}\n\n_Клиентский текст:_\n${clientMsg}`;
-    const api = `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`;
-    try{
-      // используем POST для безопасной передачи текста (GET тоже подойдет)
-      const res = await fetch(api, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({chat_id:chat, text: tgText, parse_mode:'Markdown'})
-      });
-      const data = await res.json();
-      if(data && data.ok){
-        status.textContent = '✅ WhatsApp открыт и уведомление отправлено в Telegram';
-        status.className='status show ok';
-      }else{
-        console.warn('tg err', data);
-        status.textContent = '⚠️ WhatsApp открыт, но не удалось отправить в Telegram (проверь токен)';
-        status.className='status show err';
-      }
-    }catch(err){
-      console.error(err);
-      status.textContent = '⚠️ Ошибка при отправке в Telegram';
-      status.className='status show err';
-    }
-  }else{
-    status.textContent = '✅ WhatsApp открыт. (Telegram не настроен — токен не указан)';
-    status.className='status show ok';
-  }
-
-  setTimeout(()=>status.className='status',6000);
-});
-
-// кнопка отправить только в Telegram (без открытия WA)
-el('openTG').addEventListener('click', async ()=>{
-  const token = tgToken.value.trim();
-  const chat = tgChat.value.trim() || '881133631';
-  if(!token){
-    status.textContent = '⚠️ Токен Telegram не указан';
-    status.className='status show err';
+form.addEventListener('submit', e=>{
+  e.preventDefault();
+  let raw=phoneInput.value.replace(/\D/g,'');
+  if(raw.length!==11 || !raw.startsWith('7')){
+    statusEl.textContent="⚠️ Введите номер в формате +7 XXX XXX XX XX";
+    statusEl.className="status show err";
     return;
   }
-  const promoFull = buildPromoFull();
-  const clientMsg = buildClientMessage();
-  const tgText = `📣 *Промо от ${myName.value.trim()}* \n\n${promoFull}\n\n_Клиентский текст:_\n${clientMsg}`;
-  const api = `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`;
-  try{
-    const res = await fetch(api, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({chat_id:chat, text: tgText, parse_mode:'Markdown'})
-    });
-    const data = await res.json();
-    if(data && data.ok){
-      status.textContent = '✅ Уведомление отправлено в Telegram';
-      status.className='status show ok';
-    }else{
-      console.warn('tg err', data);
-      status.textContent = '⚠️ Не удалось отправить в Telegram';
-      status.className='status show err';
-    }
-  }catch(err){
-    console.error(err);
-    status.textContent = '⚠️ Ошибка сети';
-    status.className='status show err';
-  }
-  setTimeout(()=>status.className='status',5000);
+  const waUrl=`https://wa.me/${raw}?text=${encodeURIComponent(PROMO_MESSAGE)}`;
+  window.open(waUrl,'_blank');
+  statusEl.textContent="✅ WhatsApp открыт, сообщение готово к отправке";
+  statusEl.className="status show ok";
 });
-
 </script>
 </body>
 </html>
