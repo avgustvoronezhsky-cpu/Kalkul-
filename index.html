@@ -2,77 +2,76 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Отправка сообщения о ДТП 🚗</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Отправка сообщения 🚗</title>
 <style>
-:root{
-  --bg: linear-gradient(180deg,#f7f7fb 0%,#eef2fb 100%);
-  --card: rgba(255,255,255,0.85);
-  --accent: #0a84ff;
-  --accent-dark: #0066d6;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-}
-html,body{height:100%;margin:0;}
-body{display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);}
-.frame{width:100%;max-width:420px;border-radius:22px;backdrop-filter:blur(12px);background:var(--card);padding:20px;box-shadow:0 10px 30px rgba(20,20,50,0.12);}
-h1{font-size:20px;margin:0 0 20px;text-align:center;}
-.group{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
-label{font-size:14px;color:#555;}
-input{border:none;outline:none;background:#fff;border-radius:16px;padding:14px;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,0.05);}
-button{background:linear-gradient(180deg,var(--accent),var(--accent-dark));color:white;border:none;padding:16px;font-size:17px;border-radius:18px;cursor:pointer;display:block;width:100%;}
-.status{margin-top:14px;padding:10px;border-radius:12px;font-size:14px;display:none;}
-.status.show{display:block;}
-.ok{background:rgba(16,185,129,0.1);color:#065f46;}
-.err{background:rgba(239,68,68,0.1);color:#7f1d1d;}
+body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f7fb;font-family:sans-serif;}
+.frame{background:#fff;padding:20px;border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,0.1);max-width:400px;width:100%;}
+h1{text-align:center;font-size:20px;margin-bottom:20px;}
+.group{margin-bottom:16px;}
+input{width:100%;padding:12px;font-size:16px;border:1px solid #ccc;border-radius:12px;}
+.actions{display:flex;gap:10px;}
+button{flex:1;padding:14px;font-size:15px;border:none;border-radius:12px;cursor:pointer;color:#fff;}
+button.wa{background:#25D366;}
+button.tg{background:#0088cc;}
+.status{margin-top:14px;font-size:14px;}
 </style>
 </head>
 <body>
 <div class="frame">
   <h1>📲 Отправка сообщения</h1>
-  <form id="promoForm">
-    <div class="group">
-      <label>Введите номер клиента</label>
-      <input id="phone" type="tel" placeholder="+7 XXX XXX XX XX" required>
-    </div>
-    <button type="submit">Отправить описание в WhatsApp</button>
-    <div id="status" class="status"></div>
-  </form>
+  <div class="group">
+    <input id="phone" type="tel" placeholder="+7 XXX XXX XX XX">
+  </div>
+  <div class="actions">
+    <button class="wa" onclick="sendWA()">WhatsApp</button>
+    <button class="tg" onclick="sendTG()">Telegram</button>
+  </div>
+  <div id="status" class="status"></div>
 </div>
 
 <script>
-const form=document.getElementById('promoForm');
-const phoneInput=document.getElementById('phone');
 const statusEl=document.getElementById('status');
+const phoneInput=document.getElementById('phone');
 
-const MY_PHONE="+7 (908) 134-37-22"; // твой номер
-const MY_NAME="Белашков Данила";     // твоё имя
-const CITY="Воронеж";
+const DANILA_PHONE="+79081343722";
+const DANILA_NAME="Данила";
 
-// Текст сообщения для клиента
-const PROMO_MESSAGE = `Здравствуйте! 👋
-Меня зовут ${MY_NAME}, я аварийный комиссар в г. ${CITY}.
+const MESSAGE=`Здравствуйте! 👋
+Меня зовут ${DANILA_NAME}.  
 
 🚗 Помогаю при оформлении ДТП  
-💰 Увеличиваю страховую выплату в 2-3 раза  
+💰 Увеличиваю страховую выплату  
 🔧 Организую ремонт авто  
-🚛 Эвакуатор в любой район  
+🚛 Эвакуатор  
 
-📞 Телефон для связи: ${MY_PHONE}
-`;
+📞 Телефон для связи: ${DANILA_PHONE}`;
 
-form.addEventListener('submit', e=>{
-  e.preventDefault();
-  let raw=phoneInput.value.replace(/\D/g,'');
-  if(raw.length!==11 || !raw.startsWith('7')){
+function normalizePhone(){
+  return phoneInput.value.replace(/\D/g,'');
+}
+
+function sendWA(){
+  let raw=normalizePhone();
+  if(raw.length!==11||!raw.startsWith('7')){
     statusEl.textContent="⚠️ Введите номер в формате +7 XXX XXX XX XX";
-    statusEl.className="status show err";
     return;
   }
-  const waUrl=`https://wa.me/${raw}?text=${encodeURIComponent(PROMO_MESSAGE)}`;
-  window.open(waUrl,'_blank');
-  statusEl.textContent="✅ WhatsApp открыт, сообщение готово к отправке";
-  statusEl.className="status show ok";
-});
+  const url=`https://wa.me/${raw}?text=${encodeURIComponent(MESSAGE)}`;
+  window.open(url,'_blank');
+  statusEl.textContent="✅ WhatsApp открыт";
+}
+
+function sendTG(){
+  let raw=normalizePhone();
+  if(raw.length!==11||!raw.startsWith('7')){
+    statusEl.textContent="⚠️ Введите номер в формате +7 XXX XXX XX XX";
+    return;
+  }
+  const url=`https://t.me/${raw}`;
+  window.open(url,'_blank');
+  statusEl.textContent="✅ Telegram открыт (если у клиента есть аккаунт)";
+}
 </script>
 </body>
 </html>
